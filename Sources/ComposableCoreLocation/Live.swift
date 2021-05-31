@@ -38,12 +38,19 @@ extension LocationManager {
         }
       }
     }
-
+    
     manager.destroy = { id in
       .fireAndForget {
         dependencies[id]?.subscriber.send(completion: .finished)
         dependencies[id] = nil
       }
+    }
+    
+    manager.observe = { id in
+        Effect.run { subscriber in
+            dependencies[id]?.delegate.subscribers.append(subscriber)
+            return AnyCancellable {}
+        }
     }
 
     manager.locationServicesEnabled = CLLocationManager.locationServicesEnabled
@@ -174,24 +181,24 @@ private struct Dependencies {
 private var dependencies: [AnyHashable: Dependencies] = [:]
 
 private class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
-  let subscriber: Effect<LocationManager.Action, Never>.Subscriber
+  var subscribers: [Effect<LocationManager.Action, Never>.Subscriber]
 
   init(_ subscriber: Effect<LocationManager.Action, Never>.Subscriber) {
-    self.subscriber = subscriber
+    self.subscribers = [subscriber]
   }
 
   func locationManager(
     _ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus
   ) {
-    subscriber.send(.didChangeAuthorization(status))
+    subscribers.forEach { $0.send(.didChangeAuthorization(status)) }
   }
 
   func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-    subscriber.send(.didFailWithError(LocationManager.Error(error)))
+    subscribers.forEach { $0.send(.didFailWithError(LocationManager.Error(error))) }
   }
 
   func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-    subscriber.send(.didUpdateLocations(locations.map(Location.init(rawValue:))))
+    subscribers.forEach { $0.send(.didUpdateLocations(locations.map(Location.init(rawValue:)))) }
   }
 
   #if os(macOS)
@@ -199,12 +206,12 @@ private class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
       _ manager: CLLocationManager, didUpdateTo newLocation: CLLocation,
       from oldLocation: CLLocation
     ) {
-      subscriber.send(
+        subscribers.forEach { $0.send(
         .didUpdateTo(
           newLocation: Location(rawValue: newLocation),
           oldLocation: Location(rawValue: oldLocation)
         )
-      )
+        ) }
     }
   #endif
 
@@ -212,37 +219,37 @@ private class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     func locationManager(
       _ manager: CLLocationManager, didFinishDeferredUpdatesWithError error: Error?
     ) {
-      subscriber.send(.didFinishDeferredUpdatesWithError(error.map(LocationManager.Error.init)))
+        subscribers.forEach { $0.send(.didFinishDeferredUpdatesWithError(error.map(LocationManager.Error.init))) }
     }
   #endif
 
   #if os(iOS) || targetEnvironment(macCatalyst)
     func locationManagerDidPauseLocationUpdates(_ manager: CLLocationManager) {
-      subscriber.send(.didPauseLocationUpdates)
+        subscribers.forEach { $0.send(.didPauseLocationUpdates) }
     }
   #endif
 
   #if os(iOS) || targetEnvironment(macCatalyst)
     func locationManagerDidResumeLocationUpdates(_ manager: CLLocationManager) {
-      subscriber.send(.didResumeLocationUpdates)
+        subscribers.forEach { $0.send(.didResumeLocationUpdates) }
     }
   #endif
 
   #if os(iOS) || os(watchOS) || targetEnvironment(macCatalyst)
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-      subscriber.send(.didUpdateHeading(newHeading: Heading(rawValue: newHeading)))
+        subscribers.forEach { $0.send(.didUpdateHeading(newHeading: Heading(rawValue: newHeading))) }
     }
   #endif
 
   #if os(iOS) || os(macOS) || targetEnvironment(macCatalyst)
     func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
-      subscriber.send(.didEnterRegion(Region(rawValue: region)))
+        subscribers.forEach { $0.send(.didEnterRegion(Region(rawValue: region))) }
     }
   #endif
 
   #if os(iOS) || os(macOS) || targetEnvironment(macCatalyst)
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
-      subscriber.send(.didExitRegion(Region(rawValue: region)))
+        subscribers.forEach { $0.send(.didExitRegion(Region(rawValue: region))) }
     }
   #endif
 
@@ -250,7 +257,7 @@ private class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     func locationManager(
       _ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion
     ) {
-      subscriber.send(.didDetermineState(state, region: Region(rawValue: region)))
+        subscribers.forEach { $0.send(.didDetermineState(state, region: Region(rawValue: region))) }
     }
   #endif
 
@@ -258,15 +265,15 @@ private class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
     func locationManager(
       _ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error
     ) {
-      subscriber.send(
+        subscribers.forEach { $0.send(
         .monitoringDidFail(
-          region: region.map(Region.init(rawValue:)), error: LocationManager.Error(error)))
+            region: region.map(Region.init(rawValue:)), error: LocationManager.Error(error))) }
     }
   #endif
 
   #if os(iOS) || os(macOS) || targetEnvironment(macCatalyst)
     func locationManager(_ manager: CLLocationManager, didStartMonitoringFor region: CLRegion) {
-      subscriber.send(.didStartMonitoring(region: Region(rawValue: region)))
+        subscribers.forEach { $0.send(.didStartMonitoring(region: Region(rawValue: region))) }
     }
   #endif
 
@@ -275,9 +282,9 @@ private class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
       _ manager: CLLocationManager, didRange beacons: [CLBeacon],
       satisfying beaconConstraint: CLBeaconIdentityConstraint
     ) {
-      subscriber.send(
+        subscribers.forEach { $0.send(
         .didRangeBeacons(
-          beacons.map(Beacon.init(rawValue:)), satisfyingConstraint: beaconConstraint))
+            beacons.map(Beacon.init(rawValue:)), satisfyingConstraint: beaconConstraint)) }
     }
   #endif
 
@@ -286,14 +293,14 @@ private class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
       _ manager: CLLocationManager, didFailRangingFor beaconConstraint: CLBeaconIdentityConstraint,
       error: Error
     ) {
-      subscriber.send(
-        .didFailRanging(beaconConstraint: beaconConstraint, error: LocationManager.Error(error)))
+        subscribers.forEach { $0.send(
+            .didFailRanging(beaconConstraint: beaconConstraint, error: LocationManager.Error(error))) }
     }
   #endif
 
   #if os(iOS) || targetEnvironment(macCatalyst)
     func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
-      subscriber.send(.didVisit(Visit(visit: visit)))
+        subscribers.forEach { $0.send(.didVisit(Visit(visit: visit))) }
     }
   #endif
 }

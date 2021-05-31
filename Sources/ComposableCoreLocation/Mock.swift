@@ -50,6 +50,7 @@
         _unimplemented("create")
       },
       destroy: @escaping (AnyHashable) -> Effect<Never, Never> = { _ in _unimplemented("destroy") },
+      observe: @escaping (AnyHashable) -> Effect<Action, Never> = { _ in _unimplemented("observe") },
       dismissHeadingCalibrationDisplay: @escaping (AnyHashable) -> Effect<Never, Never> = { _ in
         _unimplemented("dismissHeadingCalibrationDisplay")
       },
@@ -115,6 +116,7 @@
         authorizationStatus: authorizationStatus,
         create: create,
         destroy: destroy,
+        observe: observe,
         dismissHeadingCalibrationDisplay: dismissHeadingCalibrationDisplay,
         heading: heading,
         headingAvailable: headingAvailable,
