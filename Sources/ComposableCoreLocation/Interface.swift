@@ -395,7 +395,7 @@ public struct LocationManager {
   }
     
   public func observe(id: AnyHashable) -> Effect<Action, Never> {
-    self.observe(id: id)
+    self.observe(id)
   }
 
   @available(macOS, unavailable)
