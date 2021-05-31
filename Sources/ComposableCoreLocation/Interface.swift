@@ -258,7 +258,7 @@ public struct LocationManager {
 
   var destroy: (AnyHashable) -> Effect<Never, Never> = { _ in _unimplemented("destroy") }
     
-  var observe: (AnyHashable) -> Effect<Action, Never> = { _ in _unimplemented("observe") }
+  public var observe: (AnyHashable) -> Effect<Action, Never> = { _ in _unimplemented("observe") }
 
   @available(macOS, unavailable)
   @available(tvOS, unavailable)
