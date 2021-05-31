@@ -258,7 +258,7 @@ public struct LocationManager {
 
   var destroy: (AnyHashable) -> Effect<Never, Never> = { _ in _unimplemented("destroy") }
     
-  public var observe: (AnyHashable) -> Effect<Action, Never> = { _ in _unimplemented("observe") }
+  var observe: (AnyHashable) -> Effect<Action, Never> = { _ in _unimplemented("observe") }
 
   @available(macOS, unavailable)
   @available(tvOS, unavailable)
@@ -392,6 +392,10 @@ public struct LocationManager {
   /// - Returns: A fire-and-forget effect.
   public func destroy(id: AnyHashable) -> Effect<Never, Never> {
     self.destroy(id)
+  }
+    
+  public func observe(id: AnyHashable) -> Effect<Action, Never> {
+    self.observe(id: id)
   }
 
   @available(macOS, unavailable)
